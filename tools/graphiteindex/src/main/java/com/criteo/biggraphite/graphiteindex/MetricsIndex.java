@@ -32,6 +32,8 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.automaton.RegExp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class MetricsIndex
     implements Closeable
@@ -165,14 +167,37 @@ public class MetricsIndex
         }
     }
 
-    public List<String> search(String pattern)
+    public void insert(String path, long offset)
+    {
+        logger.debug("{} - Inserting '{}' with offset {}", name, path);
+
+        Document doc = MetricPath.toDocument(path, offset);
+
+        try {
+            writer.addDocument(doc);
+        } catch(IOException e) {
+            logger.error("{} - Cannot insert metric in index", name, e);
+        }
+    }
+
+    public List<Long> searchOffsets(String pattern)
+    {
+        return search(pattern, MetricPath::getOffsetFromDocument);
+    }
+
+    public List<String> searchPaths(String pattern)
+    {
+        return search(pattern, MetricPath::getPathFromDocument);
+    }
+
+    private <T> List<T> search(String pattern, Function<Document, T> handler)
     {
         BooleanQuery query = patternToQuery(pattern);
         logger.debug("{} - Searching for '{}', generated query: {}", name, pattern, query);
 
-        ArrayList<String> results = new ArrayList<>();
+        ArrayList<T> results = new ArrayList<>();
         Collector collector = new MetricsIndexCollector(
-            doc -> results.add(MetricPath.fromDocument(doc))
+            doc -> results.add(handler.apply(doc))
         );
 
         try {

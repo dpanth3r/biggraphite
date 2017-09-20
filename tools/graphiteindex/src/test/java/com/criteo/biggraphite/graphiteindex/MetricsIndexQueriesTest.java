@@ -102,7 +102,7 @@ public class MetricsIndexQueriesTest {
 
     @Test
     public void test() {
-        List<String> results = index.search(query);
+        List<String> results = index.searchPaths(query);
         Set<String> uniqueResults = new HashSet<>(results);
         assertEquals(expectedResults, uniqueResults);
     }
